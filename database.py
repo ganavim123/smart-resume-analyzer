@@ -1,12 +1,9 @@
 import sqlite3
 
-# Connect Database
 conn = sqlite3.connect("resume_data.db")
 
-# Create Cursor
 cursor = conn.cursor()
 
-# Create Table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS resumes (
 
@@ -17,9 +14,11 @@ CREATE TABLE IF NOT EXISTS resumes (
     job_description TEXT,
 
     score INTEGER
+
 )
 """)
 
 conn.commit()
+conn.close()
 
 print("Database Created Successfully")

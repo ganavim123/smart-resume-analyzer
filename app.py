@@ -1,8 +1,21 @@
-import sqlite3
 import streamlit as st
+import sqlite3
 from PyPDF2 import PdfReader
 from skills import skills_list
 
+# Load CSS
+def load_css():
+    with open("style.css") as f:
+        st.markdown(
+            f"<style>{f.read()}</style>",
+            unsafe_allow_html=True
+        )
+
+load_css()
+
+# Database Connection
+conn = sqlite3.connect("resume_data.db")
+cursor = conn.cursor()
 
 st.title("AI Smart Resume Analyzer")
 
@@ -15,6 +28,7 @@ job_description = st.text_area(
     "Enter Job Description"
 )
 
+# Extract Text Function
 def extract_text(pdf_file):
 
     pdf = PdfReader(pdf_file)
@@ -22,9 +36,14 @@ def extract_text(pdf_file):
     text = ""
 
     for page in pdf.pages:
-        text += page.extract_text()
+
+        page_text = page.extract_text()
+
+        if page_text:
+            text += page_text
 
     return text
+
 
 if uploaded_file is not None:
 
@@ -33,21 +52,23 @@ if uploaded_file is not None:
     st.subheader("Resume Content")
     st.write(resume_text)
 
-    resume_text = resume_text.lower()
-    job_description = job_description.lower()
+    resume_text_lower = resume_text.lower()
+    job_description_lower = job_description.lower()
 
+    # Job Skills
     job_skills = []
 
     for skill in skills_list:
 
-        if skill.lower() in job_description:
+        if skill.lower() in job_description_lower:
             job_skills.append(skill)
 
+    # Matched Skills
     matched_skills = []
 
     for skill in job_skills:
 
-        if skill.lower() in resume_text:
+        if skill.lower() in resume_text_lower:
             matched_skills.append(skill)
 
     st.subheader("Job Required Skills")
@@ -56,6 +77,7 @@ if uploaded_file is not None:
     st.subheader("Matched Skills")
     st.write(matched_skills)
 
+    # Score Calculation
     if len(job_skills) > 0:
 
         score = int(
@@ -73,6 +95,7 @@ if uploaded_file is not None:
         f"Your Resume Matches {score}% of the Job Description"
     )
 
+    # Missing Skills
     missing_skills = []
 
     for skill in job_skills:
@@ -83,6 +106,7 @@ if uploaded_file is not None:
     st.subheader("Missing Skills")
     st.write(missing_skills)
 
+    # Suggestions
     st.subheader("Suggestions")
 
     if score >= 80:
@@ -97,3 +121,21 @@ if uploaded_file is not None:
         st.error(
             "Add more technical skills and projects."
         )
+
+    # Save Data in Database
+    cursor.execute(
+        """
+        INSERT INTO resumes
+        (resume_name, job_description, score)
+        VALUES (?, ?, ?)
+        """,
+        (
+            uploaded_file.name,
+            job_description,
+            score
+        )
+    )
+
+    conn.commit()
+
+conn.close()
